@@ -1,0 +1,7 @@
+# Minimal docassemble configuration for tests/da_harness.py (no server needed).
+debug: True
+secretkey: change-me-0123456789
+db:
+  prefix: sqlite:///
+  name: /tmp/da-harness.db
+uploads: /tmp/da-harness-files

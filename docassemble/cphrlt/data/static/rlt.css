@@ -1,0 +1,19 @@
+/* Joint RLT interview styling */
+.rlt-callout {
+  border-left: 4px solid #2f5d8a;
+  background: #eef3f8;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0.25rem;
+}
+.rlt-callout.rlt-warning {
+  border-left-color: #b7791f;
+  background: #fdf6e7;
+}
+.da-review .bg-secondary-subtle {
+  border-radius: 0.25rem;
+}
+mark {
+  background: #fff3a3;
+  padding: 0 0.15em;
+}

@@ -1,0 +1,1121 @@
+---
+id: intro
+section: intro
+progress: 0
+question: |
+  California Joint Revocable Living Trust
+subquestion: |
+  This questionnaire prepares a **shared revocable living trust** for a
+  married couple (or registered domestic partners) who live in California.
+
+  When you finish, you can download:
+
+  * **Joint Revocable Living Trust Agreement** with Schedules A, B, and C
+  * **Certification of Trust** (Probate Code section 18100.5) for banks and
+    title companies
+  * **General Assignment** of personal property to the trust
+  * **Pour-over wills** for each of you, with guardian nominations
+  * **Plan summary and funding memo** for attorney review, including a list
+    of any blanks that still need to be filled in
+
+  #### Before you start
+
+  Have these ready:
+
+  1. Full legal names of both spouses, and any other names used on titles
+  2. Names and birth dates of your children (living or deceased)
+  3. Who you want to serve as successor trustee, executor, and guardian
+  4. Who should inherit, and any specific gifts
+  5. A list of your major assets (home, accounts, business interests)
+
+  Most couples finish in about 30 to 45 minutes. Your answers are saved as
+  you go, and you can come back later.
+
+  <div class="rlt-callout">
+  The documents are drafts for review by a California attorney before
+  signing. They are not legal advice.
+  </div>
+continue button field: intro_seen
+continue button label: Let's begin
+---
+id: restatement
+section: intro
+question: |
+  Is this a new trust or a restatement?
+subquestion: |
+  A **restatement** replaces every term of an existing trust while keeping
+  the original trust in place. Couples often restate an older trust so they
+  don't have to retitle their assets.
+field: is_restatement
+buttons:
+  - "We are creating a new trust": False
+  - "We want to restate an existing trust": True
+help:
+  label: Restatement or amendment?
+  content: |
+    An **amendment** changes only some provisions. A **restatement**
+    replaces the whole trust document but keeps the same trust, so
+    accounts and deeds titled in the trust stay valid. If the changes are
+    extensive, a restatement is usually cleaner than another amendment.
+---
+id: original trust
+section: intro
+question: |
+  The existing trust
+subquestion: |
+  The restated trust keeps the original name and date so that existing
+  titles stay valid. Both of you must be the current trustors and have the
+  power to amend it.
+fields:
+  - Name of the existing trust: original_trust_name
+    hint: The Smith Family Trust
+  - Date the existing trust was signed: original_trust_date
+    datatype: date
+    max: ${ today().format('yyyy-MM-dd') }
+  - Prior amendments or restatements (optional): original_amendments
+    input type: area
+    required: False
+    hint: First Amendment dated March 3, 2015
+---
+id: spouse1 name
+section: couple
+question: |
+  The first spouse
+subquestion: |
+  Enter the full legal name exactly as it should appear in the documents.
+  The order does not change anything about how the trust works.
+fields:
+  - First name: spouse1.name.first
+  - Middle name: spouse1.name.middle
+    required: False
+  - Last name: spouse1.name.last
+  - Suffix: spouse1.name.suffix
+    required: False
+    code: name_suffix()
+  - Other names used on titles or accounts (optional): spouse1.aka
+    required: False
+    hint: Mary Ann Jones (maiden name)
+    help: |
+      If any asset is titled under a different name (a maiden name, a
+      shortened name, or an initial), list it here. The trust will state
+      that property held under that name belongs to the trust.
+---
+id: spouse2 name
+section: couple
+question: |
+  The second spouse
+fields:
+  - First name: spouse2.name.first
+  - Middle name: spouse2.name.middle
+    required: False
+  - Last name: spouse2.name.last
+  - Suffix: spouse2.name.suffix
+    required: False
+    code: name_suffix()
+  - Other names used on titles or accounts (optional): spouse2.aka
+    required: False
+---
+id: residence
+section: couple
+question: |
+  Where do ${ spouse1.name.first } and ${ spouse2.name.first } live?
+subquestion: |
+  The trust is drafted under California law, so you must reside in
+  California.
+fields:
+  - Street address: residence.address
+  - Unit: residence.unit
+    required: False
+  - City: residence.city
+    grid: 6
+  - State: residence.state
+    code: states_list()
+    default: CA
+    grid: 2
+  - ZIP: residence.zip
+    grid: 4
+  - County: residence.county
+    hint: Los Angeles
+validation code: |
+  if residence.state != 'CA':
+    validation_error("This questionnaire drafts a California trust. For a residence outside California, please consult counsel licensed in that state.", field='residence.state')
+---
+id: marriage
+section: couple
+question: |
+  Your marriage
+fields:
+  - Do you want to include the date of your marriage?: marriage_date_known
+    datatype: yesnoradio
+    default: True
+  - Date of marriage: marriage_date
+    datatype: date
+    max: ${ today().format('yyyy-MM-dd') }
+    show if: marriage_date_known
+  - Are you married or registered domestic partners?: union_type
+    input type: radio
+    choices:
+      - Married: married
+      - Registered domestic partners: rdp
+    default: married
+---
+id: children any
+section: family
+question: |
+  Do either of you have any children?
+subquestion: |
+  Include children of both of you, children of only one of you from
+  another relationship, adopted children, and any child who has died.
+yesno: children.there_are_any
+---
+id: child details
+section: family
+question: |
+  Tell us about the ${ ordinal(i) } child
+fields:
+  - First name: children[i].name.first
+  - Middle name: children[i].name.middle
+    required: False
+  - Last name: children[i].name.last
+  - Suffix: children[i].name.suffix
+    required: False
+    code: name_suffix()
+  - Whose child is this?: children[i].parentage
+    input type: radio
+    choices:
+      - Child of both of us (including adoption): joint
+      - "${ spouse1.name.first }'s child from another relationship": s1
+      - "${ spouse2.name.first }'s child from another relationship": s2
+    default: joint
+  - Is this child living?: children[i].is_living
+    datatype: yesnoradio
+    default: True
+  - Date of birth: children[i].birthdate
+    datatype: date
+    max: ${ today().format('yyyy-MM-dd') }
+    show if: children[i].is_living
+  - Did this child leave any living children or other descendants?: children[i].left_issue
+    datatype: yesnoradio
+    show if:
+      variable: children[i].is_living
+      is: False
+---
+id: child complete
+code: |
+  children[i].name.first
+  children[i].parentage
+  if children[i].is_living:
+    children[i].birthdate
+  else:
+    children[i].left_issue
+  children[i].complete = True
+---
+id: children another
+section: family
+question: |
+  Any other children?
+subquestion: |
+  So far you have told us about
+  ${ comma_and_list([c.name.full() for c in children.complete_elements()]) }.
+yesno: children.there_is_another
+---
+id: stepchildren
+section: family
+question: |
+  Should all of the children be treated as children of both of you?
+subquestion: |
+  You listed at least one child who is the child of only one of you.
+
+  * **Yes** treats every listed child, and that child's descendants, as a
+    child and descendant of both of you for every purpose of the trust.
+  * **No** treats each child as the child of their own parent only. Every
+    listed child is still a beneficiary wherever the trust names "our
+    children," but gifts to "descendants" follow blood and adoption.
+field: stepchildren_equal
+buttons:
+  - "Yes, treat all of them as ours": True
+  - "No": False
+---
+id: omitted any
+section: family
+question: |
+  Is there anyone you intend to leave out?
+subquestion: |
+  You do not have to list anyone. The trust already says that anyone not
+  named receives nothing. Naming a person you are deliberately leaving
+  out, such as an estranged relative, can make a later challenge harder.
+yesno: omitted_people.there_are_any
+---
+id: omitted people
+section: family
+question: |
+  People you are intentionally leaving out
+list collect:
+  enable: not omitted_people.has_been_gathered()
+  add another label: Add another person
+fields:
+  - Full name: omitted_people[i].name.text
+  - Relationship (optional): omitted_people[i].relationship
+    required: False
+    hint: brother
+---
+id: omitted another
+section: family
+question: |
+  Anyone else you want to leave out?
+yesno: omitted_people.there_is_another
+---
+id: trust name and date
+section: trust_setup
+question: |
+  Name and date of the trust
+fields:
+  - Name of the trust: trust_name
+    default: ${ default_trust_name }
+    help: |
+      Most California couples use "The [Last Name] Family Trust." The name
+      is what banks and title companies will see, for example: "John Smith
+      and Mary Smith, Trustees of The Smith Family Trust dated May 1, 2026."
+  - What should the document call the two of you?: trustor_term
+    input type: radio
+    choices:
+      - Trustors (most common in California): Trustor
+      - Settlors: Settlor
+    default: Trustor
+  - Do you know the date you will sign?: trust_date_known
+    datatype: yesnoradio
+    default: False
+    help: |
+      If you leave this as No, the documents print a highlighted blank
+      line for the signing date that can be filled in by hand.
+  - Signing date: trust_date
+    datatype: date
+    show if: trust_date_known
+---
+id: initial trustee authority
+section: trustees
+question: |
+  You will both serve as the first trustees
+subquestion: |
+  While you are both living and able, ${ spouse1.name.first } and
+  ${ spouse2.name.first } manage the trust together as co-trustees. If one
+  of you dies or can no longer manage, the other continues alone.
+fields:
+  - While you are both serving, who must sign for the trust?: joint_trustee_authority
+    input type: radio
+    choices:
+      - Either of us may act alone (recommended): either
+        help: |
+          Banks and title companies can deal with either spouse. This is
+          the most practical choice for day-to-day accounts.
+      - Both of us must sign: both
+        help: |
+          More protective, but every transaction will need both
+          signatures.
+    default: either
+---
+id: successor trustees
+section: trustees
+question: |
+  Successor trustees
+subquestion: |
+  A **successor trustee** takes over after both of you have died or can no
+  longer manage your affairs. List them in order of priority. You can name
+  a bank or trust company.
+list collect:
+  enable: not successor_trustees.has_been_gathered()
+  label: |
+    Successor trustee ${ i + 1 }
+  add another label: Add another successor trustee
+fields:
+  - Full name (person or institution): successor_trustees[i].name.text
+  - Relationship (optional): successor_trustees[i].relationship
+    required: False
+    hint: daughter
+---
+id: successor trustees another
+section: trustees
+question: |
+  Add another successor trustee?
+subquestion: |
+  So far: ${ comma_and_list([t.name.text for t in successor_trustees.complete_elements()]) }.
+yesno: successor_trustees.there_is_another
+---
+id: successor mode
+section: trustees
+question: |
+  How should the successor trustees serve?
+fields:
+  - Successor trustees serve: successor_mode
+    input type: radio
+    choices:
+      - One at a time, in the order listed (recommended): sequential
+      - All of them together as co-trustees: together
+    default: sequential
+  - Co-trustee authority: cotrustee_authority
+    input type: radio
+    choices:
+      - Any one co-trustee may act alone: independently
+      - A majority must agree: majority
+      - All must act together: jointly
+    default: majority
+    show if:
+      variable: successor_mode
+      is: together
+---
+id: trustee administration
+section: trustees
+question: |
+  Incapacity and compensation
+fields:
+  - How should incapacity of a trustee be determined?: incapacity_physicians
+    input type: radio
+    datatype: integer
+    choices:
+      - Written certificate from one licensed physician: 1
+      - Written certificates from two licensed physicians (more protective): 2
+    default: 2
+  - Trustee compensation: trustee_comp
+    input type: radio
+    choices:
+      - Reasonable compensation for any trustee: reasonable
+      - Family and other individual trustees serve without pay (expenses reimbursed); professional trustees receive their published fees: none_individual
+    default: reasonable
+help:
+  label: About incapacity
+  content: |
+    The trust lets a trustee be replaced without a court conservatorship.
+    A trustee is treated as incapacitated if the physician certificate(s)
+    say so, if a court so determines, or if the trustee goes missing.
+    The trust includes a HIPAA authorization so doctors can release the
+    information needed.
+---
+id: plan type
+section: first_death
+progress: 45
+question: |
+  What happens when the first spouse dies?
+subquestion: |
+  This is the most important design choice in a joint trust. The federal
+  estate tax exemption is $15 million per person in 2026, and California
+  has no estate tax, so most couples choose the first or second option.
+
+  | | Survivor controls everything | Protects the first spouse's plan | Tax flexibility |
+  |---|:---:|:---:|:---:|
+  | All to survivor | Yes | No | Portability only |
+  | Disclaimer trust | Yes, unless survivor disclaims | Optional | Portability **and** a disclaimer trust |
+  | A/B split | Survivor's half only | Yes | Locks in the exemption; second basis step-up lost |
+field: plan_type
+choices:
+  - All to Survivor (simple joint trust): survivor
+    help: |
+      The whole trust stays revocable by the surviving spouse, who can
+      change the beneficiaries. Simplest to administer. The deceased
+      spouse's unused exemption can be preserved with a portability
+      election.
+  - "Survivor's Trust with Optional Disclaimer Trust (recommended for most couples)": disclaimer
+    default: True
+    help: |
+      Everything stays with the survivor, but within nine months after
+      the first death the survivor may disclaim any portion into an
+      irrevocable Disclaimer Trust that pays the survivor income and
+      principal for health, education, maintenance, and support. Decides
+      the tax question after the first death, with full facts.
+  - "Mandatory A/B Split (Survivor's Trust and Bypass Trust)": ab
+    help: |
+      At the first death, the deceased spouse's share (up to the exemption
+      amount) goes into an irrevocable Bypass Trust. This protects that
+      share for the final beneficiaries, which is useful in blended
+      families and second marriages. It requires a separate tax return
+      each year and gives up a second basis step-up on those assets.
+---
+id: subtrust terms
+if: plan_type in ('ab', 'disclaimer')
+section: first_death
+question: |
+  % if plan_type == 'ab':
+  Terms of the Bypass Trust
+  % else:
+  Terms of the Disclaimer Trust
+  % endif
+subquestion: |
+  This irrevocable trust benefits the surviving spouse for life, then
+  passes to your final beneficiaries.
+fields:
+  - How should income be paid to the surviving spouse?: subtrust_income
+    input type: radio
+    choices:
+      - All net income, at least quarterly (recommended): mandatory
+      - Income only as needed for health, education, maintenance, and support: discretionary
+    default: mandatory
+  - Give the surviving spouse a yearly "5 and 5" withdrawal right?: bypass_five_five
+    datatype: yesnoradio
+    default: False
+    show if:
+      code: plan_type == 'ab'
+    help: |
+      Lets the survivor withdraw the greater of $5,000 or 5% of the trust
+      each year without needing a reason. Convenient, but whatever is
+      withdrawn is no longer protected.
+  - Let the surviving spouse redirect the trust among your descendants and charities by will (limited power of appointment)?: bypass_lpoa
+    datatype: yesnoradio
+    default: True
+    show if:
+      code: plan_type == 'ab'
+    help: |
+      Lets the survivor adjust the plan for changed circumstances (for
+      example, a child with special needs) but never to the survivor, the
+      survivor's estate, or creditors.
+---
+id: gifts any
+section: gifts
+question: |
+  Do you want to make any specific gifts?
+subquestion: |
+  A specific gift is a sum of money, an item, or a piece of real property
+  that goes to a particular person or charity before the rest of the trust
+  is divided. Household items and keepsakes can instead be handled by a
+  signed written list, which the trust already allows.
+yesno: specific_gifts.there_are_any
+---
+id: gift details
+section: gifts
+question: |
+  Describe the ${ ordinal(i) } specific gift
+fields:
+  - Type of gift: specific_gifts[i].gift_type
+    input type: radio
+    choices:
+      - A sum of money: cash
+      - A specific item or items: property
+      - Real property: realprop
+  - Amount: specific_gifts[i].amount
+    datatype: currency
+    min: 1
+    show if:
+      variable: specific_gifts[i].gift_type
+      is: cash
+  - Description (for real property, give the street address): specific_gifts[i].description
+    input type: area
+    hide if:
+      variable: specific_gifts[i].gift_type
+      is: cash
+    hint: 1965 Ford Mustang, VIN 5F08C123456
+  - Recipient's full name: specific_gifts[i].beneficiary_name
+  - Is the recipient a charity?: specific_gifts[i].is_charity
+    datatype: yesnoradio
+    default: False
+  - Relationship (optional): specific_gifts[i].beneficiary_relationship
+    required: False
+    input type: combobox
+    code: relationship_choices
+    hide if: specific_gifts[i].is_charity
+  - When should the gift be made?: specific_gifts[i].timing
+    input type: radio
+    choices:
+      - After both of us have died: final
+      - "At ${ spouse1.name.first }'s death, from ${ spouse1.name.first }'s share": spouse1
+      - "At ${ spouse2.name.first }'s death, from ${ spouse2.name.first }'s share": spouse2
+    default: final
+  - If the recipient dies first, the gift should: specific_gifts[i].lapse
+    input type: radio
+    choices:
+      - Go to the recipient's descendants: issue
+      - Lapse and fall into the rest of the trust: residue
+    default: residue
+    hide if: specific_gifts[i].is_charity
+---
+id: gift complete
+code: |
+  specific_gifts[i].gift_type
+  if specific_gifts[i].gift_type == 'cash':
+    specific_gifts[i].amount
+  else:
+    specific_gifts[i].description
+  specific_gifts[i].beneficiary_name
+  specific_gifts[i].timing
+  if not specific_gifts[i].is_charity:
+    specific_gifts[i].lapse
+  specific_gifts[i].complete = True
+---
+id: gifts another
+section: gifts
+question: |
+  Any other specific gifts?
+subquestion: |
+  % for g in specific_gifts.complete_elements():
+  * ${ g.short() }
+  % endfor
+yesno: specific_gifts.there_is_another
+---
+id: pets
+section: gifts
+question: |
+  Care of pets
+subquestion: |
+  California allows a trust for the care of a pet for its lifetime
+  (Probate Code section 15212).
+fields:
+  - Do you want to provide for the care of your pets?: has_pets
+    datatype: yesnoradio
+    default: False
+  - Describe the pets (or say "any pets we own at our deaths"): pet_description
+    input type: area
+    show if: has_pets
+    default: any dogs, cats, or other companion animals we own at our deaths
+  - Caretaker: pet_caretaker
+    show if: has_pets
+  - Alternate caretaker (optional): pet_alt_caretaker
+    required: False
+    show if: has_pets
+  - Amount to set aside for their care: pet_fund
+    datatype: currency
+    min: 0
+    show if: has_pets
+    help: |
+      Enter 0 if the caretaker should receive the pets without a fund.
+---
+id: residue plan
+section: residue
+progress: 60
+question: |
+  Who receives the rest of the trust after both of you have died?
+subquestion: |
+  This is the **residue**: everything left after specific gifts, debts,
+  and expenses.
+field: residue_plan
+choices:
+  code: residue_plan_choices
+---
+id: residuary share method
+section: residue
+question: |
+  How should the residue be divided?
+field: residuary_share_method
+choices:
+  - Equal shares among the people and charities I name: equal
+  - Percentages that I choose: percent
+---
+id: residuary beneficiaries equal
+if: residuary_share_method == 'equal'
+section: residue
+question: |
+  Residuary beneficiaries
+subquestion: |
+  Name each person or charity who will share equally in the residue.
+list collect:
+  enable: not residuary.has_been_gathered()
+  label: |
+    Beneficiary ${ i + 1 }
+  add another label: Add another beneficiary
+fields:
+  - Full name (person or charity): residuary[i].name.text
+  - Relationship (leave blank for a charity): residuary[i].relationship
+    required: False
+  - This beneficiary is a charity: residuary[i].is_charity
+    datatype: yesno
+  - If this beneficiary dies before receiving the share: residuary[i].lapse
+    input type: radio
+    choices:
+      - Their descendants take the share: issue
+      - The other beneficiaries share it: others
+    default: issue
+---
+id: residuary beneficiaries percent
+if: residuary_share_method == 'percent'
+section: residue
+question: |
+  Residuary beneficiaries and percentages
+subquestion: |
+  The percentages must add up to 100%.
+list collect:
+  enable: not residuary.has_been_gathered()
+  label: |
+    Beneficiary ${ i + 1 }
+  add another label: Add another beneficiary
+fields:
+  - Full name (person or charity): residuary[i].name.text
+  - Relationship (leave blank for a charity): residuary[i].relationship
+    required: False
+  - This beneficiary is a charity: residuary[i].is_charity
+    datatype: yesno
+  - Percentage share: residuary[i].share
+    datatype: number
+    min: 0.01
+    max: 100
+  - If this beneficiary dies before receiving the share: residuary[i].lapse
+    input type: radio
+    choices:
+      - Their descendants take the share: issue
+      - The other beneficiaries share it: others
+    default: issue
+---
+id: residuary another
+section: residue
+question: |
+  Add another residuary beneficiary?
+subquestion: |
+  So far: ${ comma_and_list([b.name.text for b in residuary.complete_elements()]) }.
+yesno: residuary.there_is_another
+---
+id: verify residuary shares
+section: residue
+question: |
+  The percentages need to add up to 100%
+subquestion: |
+  The shares you entered add up to **${ pct(residuary_total) }**. Use the
+  Edit buttons to change them, then press Continue.
+
+  ${ residuary.table }
+
+  ${ residuary.add_action() }
+continue button field: residuary_shares_verified
+validation code: |
+  if abs(sum(float(b.share) for b in residuary) - 100) > 0.01:
+    validation_error("The shares still do not total 100%. Edit them and try again.")
+---
+id: representation
+section: residue
+question: |
+  If a beneficiary dies before you, how should their share pass to their descendants?
+field: representation
+choices:
+  - Per stirpes (by family line, the most common choice): per_stirpes
+    default: True
+    help: |
+      The share is divided equally at the children's level. If a child has
+      died, that child's descendants split the child's share. Each family
+      line gets the same amount.
+  - Per capita at each generation (California Probate Code section 247): per_capita
+    help: |
+      Shares for deceased children are pooled and divided equally among
+      all of the grandchildren, so each grandchild receives the same
+      amount regardless of family line.
+---
+id: distribution method
+section: beneficiary_trusts
+question: |
+  How should each beneficiary receive their share?
+subquestion: |
+  This applies to each individual beneficiary's share of the residue.
+fields:
+  - Distribution method: dist_method
+    input type: radio
+    choices:
+      - Outright, unless the beneficiary is young (see the next screen): outright
+      - In stages at ages you choose: staged
+      - In a lifetime protective trust for each beneficiary: lifetime
+    default: outright
+  - Number of stages: stage_count
+    datatype: integer
+    input type: radio
+    choices:
+      - One (everything at one age): 1
+      - Two: 2
+      - Three: 3
+    default: 3
+    show if:
+      variable: dist_method
+      is: staged
+  - First distribution age: stage_age_1
+    datatype: integer
+    min: 18
+    max: 99
+    default: 25
+    show if:
+      variable: dist_method
+      is: staged
+  - Second distribution age: stage_age_2
+    datatype: integer
+    min: 18
+    max: 99
+    default: 30
+    js show if: |
+      val("dist_method") == "staged" && parseInt(val("stage_count")) >= 2
+  - Third distribution age: stage_age_3
+    datatype: integer
+    min: 18
+    max: 99
+    default: 35
+    js show if: |
+      val("dist_method") == "staged" && parseInt(val("stage_count")) >= 3
+  - Age at which a beneficiary may become co-trustee of their own trust: lifetime_cotrustee_age
+    datatype: integer
+    min: 18
+    max: 99
+    default: 30
+    show if:
+      variable: dist_method
+      is: lifetime
+  - Let each beneficiary direct their trust at death among descendants and charities (limited power of appointment)?: lifetime_lpoa
+    datatype: yesnoradio
+    default: True
+    show if:
+      variable: dist_method
+      is: lifetime
+validation code: |
+  if dist_method == 'staged':
+    chosen = [stage_age_1]
+    if stage_count >= 2:
+      chosen.append(stage_age_2)
+    if stage_count >= 3:
+      chosen.append(stage_age_3)
+    if any(later <= earlier for earlier, later in zip(chosen, chosen[1:])):
+      validation_error("Each distribution age must be later than the one before it.", field='stage_age_2')
+help:
+  label: Which method should we pick?
+  content: |
+    * **Outright** is simplest. A young beneficiary's share is still held
+      in trust until the age you choose on the next screen.
+    * **Stages** (for example, one-third at 25, half the balance at 30, the
+      rest at 35) give a beneficiary time to mature. The trustee may still
+      make distributions for health, education, maintenance, and support.
+    * **Lifetime trusts** never require a final distribution. They protect
+      the inheritance from the beneficiary's creditors and divorce, and can
+      keep it out of the beneficiary's own taxable estate.
+---
+id: young beneficiaries
+section: beneficiary_trusts
+question: |
+  Young beneficiaries and special needs
+fields:
+  - Hold any distribution to a beneficiary in trust until the beneficiary reaches age: young_age
+    datatype: integer
+    min: 18
+    max: 35
+    default: 25
+    help: |
+      If a beneficiary (for example, a grandchild who takes a deceased
+      child's share) is younger than this age, the trustee holds the share
+      in a trust for health, education, maintenance, and support until
+      that age. The trustee may instead give small amounts to a custodian
+      under the California Uniform Transfers to Minors Act.
+  - Does any beneficiary have a disability or receive (or may need) needs-based public benefits such as SSI or Medi-Cal?: has_special_needs
+    datatype: yesnoradio
+    default: False
+    help: |
+      An inheritance paid outright can disqualify a person from SSI and
+      Medi-Cal. The trust can hold that beneficiary's share in a
+      supplemental needs trust instead. The trust always lets the trustee
+      do this if a need arises later; answering yes makes it mandatory for
+      the people you choose.
+---
+id: special needs people
+if: len(special_needs_candidates) > 0
+section: beneficiary_trusts
+question: |
+  Who needs a supplemental needs trust?
+fields:
+  - Beneficiaries: special_needs_people
+    datatype: checkboxes
+    code: special_needs_candidates
+    none of the above: False
+  - Anyone else (one name per line, optional): special_needs_other
+    input type: area
+    required: False
+validation code: |
+  if not special_needs_people.any_true() and not special_needs_other.strip():
+    validation_error("Choose at least one beneficiary, or go back and answer No.")
+---
+id: special needs other only
+if: len(special_needs_candidates) == 0
+section: beneficiary_trusts
+question: |
+  Who needs a supplemental needs trust?
+fields:
+  - Names (one per line): special_needs_other
+    input type: area
+---
+id: ultimate plan
+section: residue
+question: |
+  If none of your family survives
+subquestion: |
+  If no beneficiary named in the trust is living when a share is to be
+  distributed, the trust needs a final "backstop" beneficiary.
+field: ultimate_plan
+choices:
+  - One-half to each spouse's heirs under California law (most common): heirs_split
+    default: True
+    help: |
+      Divides the remaining property equally between the two families,
+      determined as if each spouse had died then, unmarried.
+  - Our heirs under California law, as if the surviving spouse had just died: heirs
+  - People or charities we name: named
+---
+id: ultimate named
+section: residue
+question: |
+  Who are the backstop beneficiaries?
+fields:
+  - Beneficiaries and shares: ultimate_named
+    input type: area
+    hint: One-half to the American Red Cross, and one-half to Jane Doe
+---
+id: survivorship
+section: residue
+question: |
+  Survivorship period
+fields:
+  - A beneficiary must outlive the person whose death triggers the gift by this many days: survivorship_days
+    datatype: integer
+    min: 0
+    max: 180
+    default: 30
+help: |
+  A short survivorship period avoids property passing through two estates
+  when beneficiaries die close together (for example, in the same
+  accident). Thirty days is common. This period does not apply between the
+  two spouses, so the marital deduction is never put at risk.
+---
+id: assets any
+section: property
+progress: 75
+question: |
+  Would you like to list your major assets on the trust schedules?
+subquestion: |
+  Schedule A lists community property, and Schedules B and C list each
+  spouse's separate property. Listing assets is optional because the
+  General Assignment transfers personal property generally, but a schedule
+  makes the plan clearer and produces a funding checklist.
+
+  Retirement accounts and life insurance are listed only on the funding
+  memo, because they pass by beneficiary designation and should not be
+  retitled.
+yesno: assets.there_are_any
+---
+id: asset details
+section: property
+question: |
+  Describe the ${ ordinal(i) } asset
+fields:
+  - Type of asset: assets[i].asset_type
+    input type: dropdown
+    code: ASSET_TYPES
+  - Description: assets[i].description
+    input type: area
+    hint: Residence at 123 Main Street, Pasadena, California 91101
+    help: |
+      Use the street address for real property. For accounts, give the
+      institution and the last four digits only (for example, "Chase
+      checking account ending in 1234").
+  - How is it owned?: assets[i].character
+    input type: radio
+    choices:
+      - Community property (acquired during marriage): cp
+      - "${ spouse1.name.first }'s separate property": s1
+      - "${ spouse2.name.first }'s separate property": s2
+    default: cp
+  - Assessor's Parcel Number (optional): assets[i].apn
+    required: False
+    show if:
+      variable: assets[i].asset_type
+      is: realprop
+  - Legal description (optional, from the grant deed): assets[i].legal_description
+    input type: area
+    required: False
+    show if:
+      variable: assets[i].asset_type
+      is: realprop
+---
+id: asset complete
+code: |
+  assets[i].asset_type
+  assets[i].description
+  assets[i].character
+  if assets[i].asset_type == 'realprop':
+    assets[i].apn
+    assets[i].legal_description
+  assets[i].complete = True
+---
+id: assets another
+section: property
+question: |
+  Any other assets to list?
+subquestion: |
+  % for a in assets.complete_elements():
+  * ${ a.description }
+  % endfor
+yesno: assets.there_is_another
+---
+id: community property presumption
+section: property
+question: |
+  Character of your property
+subquestion: |
+  The trust keeps community property community and separate property
+  separate. You may also add an agreement that **everything in the
+  trust is community property unless a schedule lists it as separate**.
+
+  <div class="rlt-callout rlt-warning">
+  That agreement is a transmutation under Family Code section 852. It can
+  give up one spouse's separate property rights, and it creates a conflict
+  of interest between the spouses. Use it only after each spouse has been
+  advised of its effect, ideally with independent counsel.
+  </div>
+fields:
+  - Add the community property agreement?: cp_presumption
+    datatype: yesnoradio
+    default: False
+---
+id: pour over wills
+section: wills
+progress: 85
+question: |
+  Pour-over wills
+subquestion: |
+  A **pour-over will** sends anything you forgot to put in the trust into
+  the trust at death. It is also where you nominate a guardian for minor
+  children.
+fields:
+  - Prepare a pour-over will for each of you?: include_wills
+    datatype: yesnoradio
+    default: True
+  - Should the executors be the surviving spouse, then your successor trustees in the same order?: executor_same
+    datatype: yesnoradio
+    default: True
+    show if: include_wills
+---
+id: executors
+section: wills
+question: |
+  Executors
+subquestion: |
+  The surviving spouse is named first in each will. List the backup
+  executors in order.
+list collect:
+  enable: not executors.has_been_gathered()
+  label: |
+    Executor ${ i + 1 }
+  add another label: Add another executor
+fields:
+  - Full name: executors[i].name.text
+  - Relationship (optional): executors[i].relationship
+    required: False
+---
+id: executors another
+section: wills
+question: |
+  Add another backup executor?
+yesno: executors.there_is_another
+---
+id: nominate guardians
+section: wills
+question: |
+  Guardian for your minor children
+subquestion: |
+  Your minor ${ 'child is' if len(minor_children) == 1 else 'children are' }
+  ${ comma_and_list([c.name.full() for c in minor_children]) }. If both of
+  you die, a court appoints a guardian, and it gives great weight to the
+  person you nominate in your will.
+fields:
+  - Nominate a guardian?: nominate_guardians
+    datatype: yesnoradio
+    default: True
+---
+id: guardians
+section: wills
+question: |
+  Guardian nominees
+subquestion: |
+  List them in order of priority. If two people should serve together (for
+  example, a married couple), enter the second person in "Serving jointly
+  with."
+list collect:
+  enable: not guardians.has_been_gathered()
+  label: |
+    Guardian ${ i + 1 }
+  add another label: Add another guardian
+fields:
+  - Full name: guardians[i].name.text
+  - Relationship (optional): guardians[i].relationship
+    required: False
+  - Serving jointly with (optional): guardians[i].co_guardian
+    required: False
+---
+id: guardians another
+section: wills
+question: |
+  Add another guardian nominee?
+yesno: guardians.there_is_another
+---
+id: optional provisions
+section: signing
+question: |
+  Optional provisions
+fields:
+  - Include a no-contest clause?: include_no_contest
+    datatype: yesnoradio
+    default: True
+    help: |
+      Under Probate Code sections 21310 to 21315, a no-contest clause can
+      be enforced only against a direct contest brought without probable
+      cause, and against creditor claims and property-ownership challenges
+      only when the clause expressly says so. This clause covers all three.
+  - Do you own firearms that may become trust property?: has_firearms
+    datatype: yesnoradio
+    default: False
+    help: |
+      Adds instructions for the trustee to hold and transfer firearms only
+      in compliance with California and federal law.
+  - Print initial lines in the footer of each trust page?: initials_footer
+    datatype: yesnoradio
+    default: True
+  - Include a table of contents in the trust?: include_toc
+    datatype: yesnoradio
+    default: True
+---
+id: signing details
+section: signing
+question: |
+  Signing and notarization
+fields:
+  - County where you will sign (for the notary acknowledgment): execution_county
+    default: ${ residence.county }
+    required: False
+    help: |
+      Leave blank to print a blank line the notary can complete.
+  - Trust taxpayer identification number on the Certification of Trust: tin_mode
+    input type: radio
+    choices:
+      - Leave a blank line to complete by hand at signing (recommended for privacy): blank
+      - Enter a number now: enter
+    default: blank
+    help: |
+      While both of you are living, a revocable trust uses either spouse's
+      Social Security number. The trust will need its own EIN after a death.
+  - Taxpayer identification number: trust_tin
+    show if:
+      variable: tin_mode
+      is: enter
+---
+id: preparer
+section: signing
+question: |
+  Preparing attorney (optional)
+subquestion: |
+  Used on the plan summary memo. Leave blank to print placeholders.
+fields:
+  - Firm name: preparer_firm
+    required: False
+  - Attorney name: preparer_attorney
+    required: False
+  - State Bar number: preparer_bar
+    required: False
+  - Phone: preparer_phone
+    required: False
+  - Email: preparer_email
+    datatype: email
+    required: False
+---
+id: documents wanted
+section: documents
+question: |
+  Which documents do you want?
+subquestion: |
+  The trust agreement is always included.
+fields:
+  - Documents: docs_wanted
+    datatype: checkboxes
+    code: document_choices
+    none of the above: False

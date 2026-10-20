@@ -1,0 +1,127 @@
+---
+metadata:
+  title: California Joint Revocable Living Trust
+  short title: Joint Trust
+  description: |
+    Questionnaire for a married couple's shared (joint) revocable living
+    trust under California law. It assembles the trust agreement,
+    a certification of trust, a general assignment, pour-over wills, and an
+    attorney summary and funding memo.
+  revision_date: 2026-10-20
+  tags:
+    - estate planning
+    - revocable trust
+    - California
+  exit link: leave
+  exit label: Save and exit
+---
+include:
+  - rlt_questions.yml
+  - rlt_logic.yml
+  - rlt_documents.yml
+---
+modules:
+  - .rlt_helpers
+---
+features:
+  navigation: True
+  small screen navigation: dropdown
+  progress bar: True
+  show progress bar percentage: True
+  question help button: True
+  labels above fields: True
+  css: rlt.css
+---
+sections:
+  - intro: Getting Started
+  - couple: The Couple
+  - family: Family
+  - trust_setup: Trust Details
+  - trustees: Trustees
+  - first_death: First Death
+  - distribution: Final Distribution
+    subsections:
+      - gifts: Specific Gifts
+      - residue: Residue
+      - beneficiary_trusts: Beneficiary Trusts
+  - property: Trust Property
+  - wills: Wills and Guardians
+  - signing: Options and Signing
+  - review: Review
+  - documents: Documents
+---
+objects:
+  - spouse1: Individual
+  - spouse2: Individual
+  - residence: Address
+  - children: DAList.using(object_type=Individual, complete_attribute='complete')
+  - omitted_people: DAList.using(object_type=RLTPerson)
+  - successor_trustees: DAList.using(object_type=RLTPerson, there_are_any=True)
+  - executors: DAList.using(object_type=RLTPerson, there_are_any=True)
+  - guardians: DAList.using(object_type=RLTPerson, there_are_any=True)
+  - specific_gifts: DAList.using(object_type=SpecificGift, complete_attribute='complete')
+  - residuary: DAList.using(object_type=Beneficiary, there_are_any=True)
+  - assets: DAList.using(object_type=TrustAsset, complete_attribute='complete')
+---
+id: interview order
+mandatory: True
+code: |
+  if defined('docs_wanted'):
+    menu_items = [action_menu_item('Review answers', 'review_done')]
+  else:
+    menu_items = []
+  intro_seen
+  is_restatement
+  if is_restatement:
+    original_trust_name
+  spouse1.name.first
+  spouse2.name.first
+  residence.county
+  marriage_date_known
+  children.gather()
+  if any_stepchildren:
+    stepchildren_equal
+  omitted_people.gather()
+  trust_name
+  joint_trustee_authority
+  successor_trustees.gather()
+  if successor_trustees.number() > 1:
+    successor_mode
+  incapacity_physicians
+  plan_type
+  if plan_type in ('ab', 'disclaimer'):
+    subtrust_income
+  specific_gifts.gather()
+  has_pets
+  residue_plan
+  if residue_plan == 'custom':
+    residuary_share_method
+    residuary.gather()
+    if residuary_share_method == 'percent' and not residuary_shares_total_ok:
+      residuary_shares_verified
+  representation
+  dist_method
+  young_age
+  if has_special_needs:
+    special_needs_list
+  ultimate_plan
+  if ultimate_plan == 'named':
+    ultimate_named
+  survivorship_days
+  assets.gather()
+  cp_presumption
+  include_wills
+  if include_wills:
+    if not executor_same:
+      executors.gather()
+    if minor_children_exist:
+      nominate_guardians
+      if nominate_guardians:
+        guardians.gather()
+  include_no_contest
+  execution_county
+  tin_mode
+  preparer_firm
+  docs_wanted
+  review_done
+  final_screen

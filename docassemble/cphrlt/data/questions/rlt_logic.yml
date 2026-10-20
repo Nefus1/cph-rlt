@@ -1,0 +1,528 @@
+---
+imports:
+  - re
+---
+auto terms:
+  successor trustee: |
+    The person or institution who takes over management of the trust when
+    both of you have died or can no longer serve.
+  pour-over will: |
+    A short will that leaves anything outside the trust to the trust, so
+    the trust's plan controls.
+  residue: |
+    Everything left in the trust after specific gifts, debts, taxes, and
+    expenses are paid.
+  per stirpes: |
+    A deceased beneficiary's share passes down that beneficiary's family
+    line in equal parts at each generation (Probate Code section 246).
+  community property: |
+    Property acquired by either spouse during marriage while living in
+    California, other than by gift or inheritance (Family Code section 760).
+  separate property: |
+    Property owned before marriage, or received by gift or inheritance
+    during marriage, plus its income (Family Code section 770).
+  portability: |
+    An election on a federal estate tax return (Form 706) that lets the
+    surviving spouse use the deceased spouse's unused estate tax exemption.
+  disclaim: |
+    To refuse an inheritance in a qualified writing, usually within nine
+    months of death (Internal Revenue Code section 2518 and Probate Code
+    sections 275 to 295). Disclaimed property passes as if the person
+    refusing it had died first.
+  health, education, maintenance, and support: |
+    The "ascertainable standard" in tax law. Limiting a trustee-beneficiary
+    to this standard keeps the trust out of that person's taxable estate.
+---
+id: trustor words
+code: |
+  T = trustor_term
+  Ts = trustor_term + 's'
+---
+id: default trust name
+code: |
+  if spouse1.name.last == spouse2.name.last:
+    default_trust_name = 'The ' + spouse1.name.last + ' Family Trust'
+  else:
+    default_trust_name = 'The ' + spouse1.name.last + ' and ' + spouse2.name.last + ' Family Trust'
+  if is_restatement:
+    default_trust_name = original_trust_name
+---
+id: trust title
+reconsider: True
+code: |
+  trust_title = clean_trust_name(trust_name)
+---
+id: county name
+reconsider: True
+code: |
+  county_name = residence.county.strip()
+  if county_name.lower().endswith(' county'):
+    county_name = county_name[:-7].strip()
+---
+id: signing county
+reconsider: True
+code: |
+  signing_county = (execution_county or '').strip()
+  if signing_county.lower().endswith(' county'):
+    signing_county = signing_county[:-7].strip()
+---
+id: children groups
+reconsider: True
+code: |
+  living_children = [c for c in children if c.is_living]
+  deceased_children = [c for c in children if not c.is_living]
+  minor_children = [c for c in living_children if c.age_in_years() < 18]
+  minor_children_exist = len(minor_children) > 0
+  any_stepchildren = any(c.parentage != 'joint' for c in children)
+  children_takers = living_children + [c for c in deceased_children if c.left_issue]
+  children_takers_names = [c.name.full(middle='full') for c in children_takers]
+---
+id: relationship choices
+code: |
+  relationship_choices = relationship_suggestions(spouse1, spouse2)
+---
+id: residue plan choices
+code: |
+  if len(children_takers):
+    residue_plan_choices = [
+      ['children', 'Our children in equal shares (a deceased child\'s share goes to that child\'s descendants)', True],
+      ['custom', 'People and/or charities we name', False]]
+  else:
+    residue_plan_choices = [['custom', 'People and/or charities we name', True]]
+---
+id: residuary total
+reconsider: True
+code: |
+  if residue_plan == 'custom' and residuary_share_method == 'percent':
+    residuary_total = sum(float(b.share) for b in residuary)
+  else:
+    residuary_total = 100.0
+  residuary_shares_total_ok = abs(residuary_total - 100) <= 0.01
+---
+id: special needs candidates
+reconsider: True
+code: |
+  _names = [c.name.full() for c in living_children]
+  if residue_plan == 'custom':
+    _names += [b.name.text for b in residuary if not b.is_charity]
+  _names += [g.beneficiary_name for g in specific_gifts if not g.is_charity]
+  special_needs_candidates = []
+  for _name in _names:
+    if _name not in special_needs_candidates:
+      special_needs_candidates.append(_name)
+  del _names
+  del _name
+---
+id: special needs list
+reconsider: True
+code: |
+  special_needs_list = []
+  if has_special_needs:
+    if len(special_needs_candidates):
+      special_needs_list += special_needs_people.true_values()
+    special_needs_list += [line.strip() for line in (special_needs_other or '').splitlines() if line.strip()]
+---
+id: plan derived
+reconsider: True
+code: |
+  art = article_map(plan_type)
+  if plan_type == 'ab':
+    subtrust_name = 'Bypass Trust'
+  elif plan_type == 'disclaimer':
+    subtrust_name = 'Disclaimer Trust'
+  else:
+    subtrust_name = ''
+  plan_label = PLAN_LABELS[plan_type]
+---
+id: stage plan
+reconsider: True
+code: |
+  if dist_method == 'staged':
+    _ages = [stage_age_1]
+    if stage_count >= 2:
+      _ages.append(stage_age_2)
+    if stage_count >= 3:
+      _ages.append(stage_age_3)
+    stage_plan = stage_schedule(stage_count, _ages)
+    del _ages
+  else:
+    stage_plan = []
+---
+id: gift groups
+reconsider: True
+code: |
+  gifts_final = [g for g in specific_gifts if g.timing == 'final']
+  gifts_s1 = [g for g in specific_gifts if g.timing == 'spouse1']
+  gifts_s2 = [g for g in specific_gifts if g.timing == 'spouse2']
+---
+id: asset groups
+reconsider: True
+code: |
+  sched_cp = [a for a in assets if a.scheduled() and a.character == 'cp']
+  sched_s1 = [a for a in assets if a.scheduled() and a.character == 's1']
+  sched_s2 = [a for a in assets if a.scheduled() and a.character == 's2']
+  designation_assets = [a for a in assets if not a.scheduled()]
+  realprop_assets = [a for a in assets if a.asset_type == 'realprop']
+  has_separate_property = len(sched_s1) + len(sched_s2) > 0
+---
+id: will executors
+reconsider: True
+code: |
+  if executor_same:
+    will_executors = list(successor_trustees)
+  else:
+    will_executors = list(executors)
+---
+id: trust dated text
+reconsider: True
+code: |
+  if is_restatement:
+    original_dated = format_date(original_trust_date, format='MMMM d, yyyy')
+  else:
+    original_dated = ''
+  if trust_date_known:
+    signing_date_text = format_date(trust_date, format='MMMM d, yyyy')
+  else:
+    signing_date_text = ''
+---
+id: document choices
+code: |
+  document_choices = [
+    ['cert', 'Certification of Trust (Probate Code section 18100.5)', True],
+    ['assignment', 'General Assignment of personal property to the trust', True]]
+  if include_wills:
+    document_choices.append(['wills', 'Pour-over wills (one for each spouse)', True])
+  document_choices.append(['summary', 'Plan summary and funding memo (for attorney review)', True])
+---
+id: file base
+code: |
+  file_base = space_to_underscore(re.sub(r'[^A-Za-z0-9 ]', '', trust_title)).strip('_')
+---
+id: placeholders
+reconsider: True
+code: |
+  placeholders = []
+  _a = None
+  if not trust_date_known:
+    placeholders.append({'item': 'Trust signing date', 'where': 'Trust title page, footer, Article One, signature page, Certification of Trust, General Assignment, pour-over wills', 'fix': 'Fill in by hand at signing, or enter the date and reassemble.'})
+  if not signing_county:
+    placeholders.append({'item': 'County of execution', 'where': 'Every notary acknowledgment', 'fix': 'The notary completes it at signing.'})
+  if 'cert' in docs_wanted.true_values() and tin_mode == 'blank':
+    placeholders.append({'item': 'Trust taxpayer identification number', 'where': 'Certification of Trust, paragraph 7', 'fix': 'Write in either spouse\'s SSN (or the EIN, after a death) at signing.'})
+  for _a in realprop_assets:
+    if not (_a.legal_description or '').strip():
+      placeholders.append({'item': 'Legal description for ' + _a.description.strip(), 'where': 'Certification of Trust, paragraph 9', 'fix': 'Copy it from the vesting deed or a title report.'})
+    if not (_a.apn or '').strip():
+      placeholders.append({'item': "Assessor's Parcel Number for " + _a.description.strip(), 'where': 'Schedule A, B, or C and the funding memo', 'fix': 'Copy it from the property tax bill.'})
+  if 'summary' in docs_wanted.true_values() and not (preparer_firm or '').strip():
+    placeholders.append({'item': 'Preparing firm and attorney', 'where': 'Plan summary memo header', 'fix': 'Enter it on the "Preparing attorney" screen.'})
+  if 'wills' in docs_wanted.true_values() and include_wills:
+    placeholders.append({'item': 'Witness names, addresses, and signing date and place', 'where': 'Attestation clause of each pour-over will', 'fix': 'Completed by hand at the signing ceremony (two disinterested adult witnesses).'})
+  placeholders.append({'item': 'Notary name, date, signature, and seal', 'where': 'Every notary acknowledgment', 'fix': 'Completed by the notary. Intentionally left blank.'})
+  del _a
+---
+id: children table
+table: children.table
+rows: children
+columns:
+  - Name: |
+      row_item.name.full()
+  - Parent: |
+      'Both' if row_item.parentage == 'joint' else (spouse1.name.first if row_item.parentage == 's1' else spouse2.name.first)
+  - Status: |
+      ('Born ' + format_date(row_item.birthdate)) if row_item.is_living else 'Deceased'
+edit:
+  - name.first
+---
+id: successor trustees table
+table: successor_trustees.table
+rows: successor_trustees
+columns:
+  - Order: |
+      row_index + 1
+  - Name: |
+      row_item.name.text
+  - Relationship: |
+      row_item.relationship
+edit:
+  - name.text
+---
+id: gifts table
+table: specific_gifts.table
+rows: specific_gifts
+columns:
+  - Gift: |
+      row_item.short()
+  - When: |
+      'After both deaths' if row_item.timing == 'final' else ('At ' + (spouse1.name.first if row_item.timing == 'spouse1' else spouse2.name.first) + "'s death")
+edit:
+  - gift_type
+---
+id: residuary table
+table: residuary.table
+rows: residuary
+columns:
+  - Beneficiary: |
+      row_item.name.text
+  - Share: |
+      pct(row_item.share) if residuary_share_method == 'percent' else 'Equal'
+  - If deceased: |
+      'To descendants' if row_item.lapse == 'issue' else 'To others'
+edit:
+  - name.text
+---
+id: assets table
+table: assets.table
+rows: assets
+columns:
+  - Asset: |
+      row_item.description
+  - Type: |
+      row_item.type_label()
+  - Character: |
+      row_item.character_label(spouse1, spouse2)
+edit:
+  - asset_type
+---
+id: review screen
+section: review
+progress: 95
+need:
+  - T
+  - county_name
+  - signing_county
+  - trust_title
+  - signing_date_text
+  - plan_label
+  - stage_plan
+  - special_needs_list
+  - children.table
+  - successor_trustees.table
+  - specific_gifts.table
+  - residuary.table
+  - assets.table
+question: |
+  Review your answers
+subquestion: |
+  Press any item to change it. When everything looks right, press
+  **Continue** to choose your documents.
+review:
+  - note: |
+      #### The couple
+  - Edit: spouse1.name.first
+    button: |
+      **${ T } 1:** ${ spouse1.name.full(middle='full') }
+      % if spouse1.aka:
+      (also known as ${ spouse1.aka })
+      % endif
+  - Edit: spouse2.name.first
+    button: |
+      **${ T } 2:** ${ spouse2.name.full(middle='full') }
+      % if spouse2.aka:
+      (also known as ${ spouse2.aka })
+      % endif
+  - Edit: residence.address
+    button: |
+      **Residence:** ${ residence.on_one_line() }, ${ county_name } County
+  - Edit: marriage_date_known
+    button: |
+      **${ 'Married' if union_type == 'married' else 'Registered domestic partners' }**${ ' on ' + format_date(marriage_date) if marriage_date_known else '' }
+  - note: |
+      #### Family
+  - Edit: children.revisit
+    button: |
+      **Children:**
+      % if len(children):
+
+      ${ children.table }
+      % else:
+      None
+      % endif
+  - Edit: stepchildren_equal
+    button: |
+      **Treat all children as children of both spouses:** ${ yesno(stepchildren_equal) }
+    show if: any_stepchildren
+  - Edit: omitted_people.revisit
+    button: |
+      **Intentionally omitted:** ${ comma_and_list([p.name.text for p in omitted_people]) if len(omitted_people) else 'No one' }
+  - note: |
+      #### Trust and trustees
+  - Edit: is_restatement
+    button: |
+      **Type:** ${ 'Restatement of ' + original_trust_name + ' dated ' + original_dated if is_restatement else 'New trust' }
+  - Edit: trust_name
+    button: |
+      **Trust name:** ${ trust_title }, dated ${ signing_date_text or '(blank, to be completed at signing)' }
+  - Edit: joint_trustee_authority
+    button: |
+      **While both serve:** ${ 'either spouse may act alone' if joint_trustee_authority == 'either' else 'both spouses must sign' }
+  - Edit: successor_trustees.revisit
+    button: |
+      **Successor trustees:**
+
+      ${ successor_trustees.table }
+  - Edit: successor_mode
+    button: |
+      **Successors serve:** ${ 'one at a time, in order' if successor_mode == 'sequential' else 'together (' + cotrustee_authority + ')' }
+    show if: successor_trustees.number() > 1
+  - Edit: incapacity_physicians
+    button: |
+      **Incapacity:** certified by ${ quantity_noun(incapacity_physicians, 'physician') }; **compensation:** ${ 'reasonable' if trustee_comp == 'reasonable' else 'individual trustees serve without pay' }
+  - note: |
+      #### Plan at the first death
+  - Edit:
+      - plan_type
+      - follow up:
+          - subtrust_income
+    button: |
+      **Plan:** ${ plan_label }
+      % if plan_type in ('ab', 'disclaimer'):
+      (income: ${ 'all net income' if subtrust_income == 'mandatory' else 'as needed' }${ ', 5-and-5 power' if plan_type == 'ab' and bypass_five_five else '' }${ ', limited power of appointment' if plan_type == 'ab' and bypass_lpoa else '' })
+      % endif
+  - note: |
+      #### Final distribution
+  - Edit: specific_gifts.revisit
+    button: |
+      **Specific gifts:**
+      % if len(specific_gifts):
+
+      ${ specific_gifts.table }
+      % else:
+      None
+      % endif
+  - Edit: has_pets
+    button: |
+      **Pet trust:** ${ ('Yes, caretaker ' + pet_caretaker + (', fund of ' + money(pet_fund) if pet_fund else '')) if has_pets else 'No' }
+  - Edit: residue_plan
+    button: |
+      **Residue:** ${ 'children in equal shares' if residue_plan == 'children' else 'named beneficiaries' }
+  - Edit: residuary.revisit
+    button: |
+      **Residuary beneficiaries:**
+
+      ${ residuary.table }
+    show if: residue_plan == 'custom'
+  - Edit: representation
+    button: |
+      **Descendants take:** ${ 'per stirpes' if representation == 'per_stirpes' else 'per capita at each generation' }
+  - Edit: dist_method
+    button: |
+      **Beneficiary shares:**
+      % if dist_method == 'outright':
+      outright (held in trust until age ${ young_age })
+      % elif dist_method == 'staged':
+      in stages at ages ${ comma_and_list([str(s['age']) for s in stage_plan]) }
+      % else:
+      lifetime protective trusts
+      % endif
+  - Edit: young_age
+    button: |
+      **Young beneficiary age:** ${ young_age }; **supplemental needs trusts:** ${ comma_and_list(special_needs_list) if has_special_needs else 'none required' }
+  - Edit: ultimate_plan
+    button: |
+      **Backstop beneficiaries:** ${ {'heirs_split': "one-half to each spouse's heirs", 'heirs': 'heirs at law', 'named': 'named beneficiaries'}[ultimate_plan] }
+  - Edit: survivorship_days
+    button: |
+      **Survivorship period:** ${ survivorship_days } days
+  - note: |
+      #### Property, wills, and options
+  - Edit: assets.revisit
+    button: |
+      **Scheduled assets:**
+      % if len(assets):
+
+      ${ assets.table }
+      % else:
+      None listed (General Assignment only)
+      % endif
+  - Edit: cp_presumption
+    button: |
+      **Community property agreement:** ${ yesno(cp_presumption) }
+  - Edit: include_wills
+    button: |
+      **Pour-over wills:** ${ yesno(include_wills) }
+  - Edit: guardians.revisit
+    button: |
+      **Guardians:** ${ comma_and_list([g.name.text for g in guardians]) }
+    show if: include_wills and minor_children_exist and nominate_guardians
+  - Edit: include_no_contest
+    button: |
+      **No-contest clause:** ${ yesno(include_no_contest) }; **firearms provisions:** ${ yesno(has_firearms) }; **table of contents:** ${ yesno(include_toc) }
+  - Edit: execution_county
+    button: |
+      **Signing county:** ${ signing_county or '(blank for notary)' }; **TIN:** ${ 'blank' if tin_mode == 'blank' else 'entered' }
+continue button field: review_done
+---
+id: children revisit
+section: family
+question: |
+  Edit your children
+subquestion: |
+  ${ children.table }
+
+  ${ children.add_action() }
+continue button field: children.revisit
+---
+id: omitted revisit
+section: family
+question: |
+  Edit the people you are leaving out
+subquestion: |
+  % for p in omitted_people:
+  * ${ p.name.text }
+  % endfor
+
+  ${ omitted_people.add_action() }
+continue button field: omitted_people.revisit
+---
+id: successor trustees revisit
+section: trustees
+question: |
+  Edit successor trustees
+subquestion: |
+  ${ successor_trustees.table }
+
+  ${ successor_trustees.add_action() }
+continue button field: successor_trustees.revisit
+---
+id: gifts revisit
+section: gifts
+question: |
+  Edit specific gifts
+subquestion: |
+  ${ specific_gifts.table }
+
+  ${ specific_gifts.add_action() }
+continue button field: specific_gifts.revisit
+---
+id: residuary revisit
+section: residue
+question: |
+  Edit residuary beneficiaries
+subquestion: |
+  ${ residuary.table }
+
+  ${ residuary.add_action() }
+continue button field: residuary.revisit
+---
+id: assets revisit
+section: property
+question: |
+  Edit scheduled assets
+subquestion: |
+  ${ assets.table }
+
+  ${ assets.add_action() }
+continue button field: assets.revisit
+---
+id: guardians revisit
+section: wills
+question: |
+  Edit guardian nominees
+subquestion: |
+  % for g in guardians:
+  * ${ g.name.text }
+  % endfor
+
+  ${ guardians.add_action() }
+continue button field: guardians.revisit

@@ -1,0 +1,134 @@
+---
+id: names for documents
+reconsider: True
+code: |
+  s1_name = spouse1.name.full(middle='full')
+  s2_name = spouse2.name.full(middle='full')
+---
+id: trust document
+attachment:
+  name: Joint Revocable Living Trust Agreement
+  filename: ${ file_base }_Trust_Agreement
+  description: |
+    The trust agreement with Schedules A, B, and C and a notary
+    acknowledgment.
+  variable name: trust_doc
+  docx template file: joint_rlt_trust.docx
+  valid formats:
+    - pdf
+    - docx
+  update references: include_toc
+---
+id: certification document
+attachment:
+  name: Certification of Trust
+  filename: ${ file_base }_Certification_of_Trust
+  description: |
+    Probate Code section 18100.5 certification for banks and title
+    companies.
+  variable name: cert_doc
+  docx template file: certification_of_trust.docx
+  valid formats:
+    - pdf
+    - docx
+---
+id: assignment document
+attachment:
+  name: General Assignment of Assets
+  filename: ${ file_base }_General_Assignment
+  description: |
+    Assigns tangible personal property and other untitled assets to the
+    trust.
+  variable name: assignment_doc
+  docx template file: general_assignment.docx
+  valid formats:
+    - pdf
+    - docx
+---
+id: will spouse 1
+attachment:
+  name: Pour-Over Will of ${ s1_name }
+  filename: ${ space_to_underscore(re.sub(r'[^A-Za-z0-9 ]', '', s1_name)) }_Pour_Over_Will
+  description: |
+    Requires two adult witnesses. Do not notarize.
+  variable name: will1_doc
+  docx template file: pour_over_will.docx
+  field code:
+    will_for: "'1'"
+  valid formats:
+    - pdf
+    - docx
+---
+id: will spouse 2
+attachment:
+  name: Pour-Over Will of ${ s2_name }
+  filename: ${ space_to_underscore(re.sub(r'[^A-Za-z0-9 ]', '', s2_name)) }_Pour_Over_Will
+  description: |
+    Requires two adult witnesses. Do not notarize.
+  variable name: will2_doc
+  docx template file: pour_over_will.docx
+  field code:
+    will_for: "'2'"
+  valid formats:
+    - pdf
+    - docx
+---
+id: summary document
+attachment:
+  name: Plan Summary and Funding Memo
+  filename: ${ file_base }_Plan_Summary
+  description: |
+    For attorney review. Lists every placeholder, review flags, the
+    funding checklist, and signing instructions.
+  variable name: summary_doc
+  docx template file: plan_summary.docx
+  valid formats:
+    - pdf
+    - docx
+---
+id: selected documents
+reconsider: True
+code: |
+  selected_documents = [trust_doc]
+  if docs_wanted['cert']:
+    selected_documents.append(cert_doc)
+  if docs_wanted['assignment']:
+    selected_documents.append(assignment_doc)
+  if include_wills and docs_wanted['wills']:
+    selected_documents.append(will1_doc)
+    selected_documents.append(will2_doc)
+  if docs_wanted['summary']:
+    selected_documents.append(summary_doc)
+---
+id: final screen
+event: final_screen
+section: documents
+progress: 100
+question: |
+  Your estate plan documents are ready
+subquestion: |
+  Download each document below, or use **Download all** for a ZIP file.
+  Each document is available as a PDF and as an editable Word file.
+
+  % if len(placeholders):
+  <div class="rlt-callout rlt-warning">
+  <strong>Placeholders to complete.</strong> These items appear in the
+  documents as <mark>highlighted blanks</mark>, or are lines completed at
+  signing:
+  </div>
+
+  | Item | Where | How to complete |
+  |------|-------|-----------------|
+  % for p in placeholders:
+  | ${ p['item'] } | ${ p['where'] } | ${ p['fix'] } |
+  % endfor
+  % endif
+
+  Need to change something? [Review your answers](${ url_action('review_done') })
+  and the documents will be reassembled.
+attachment code: selected_documents
+allow downloading: True
+zip filename: ${ file_base }_Estate_Plan.zip
+buttons:
+  - Exit: exit
+  - Start over: restart
