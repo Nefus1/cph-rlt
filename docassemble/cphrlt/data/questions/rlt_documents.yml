@@ -100,6 +100,100 @@ code: |
   if docs_wanted['summary']:
     selected_documents.append(summary_doc)
 ---
+id: document generation counter
+code: |
+  doc_generation = 0
+---
+id: start background assembly
+code: |
+  documents_task = background_action('assemble_documents_bg', 'refresh', generation=doc_generation)
+---
+id: assemble documents in background
+event: assemble_documents_bg
+code: |
+  # Runs in a Celery worker. Changes made here are not saved, so the
+  # finished documents are handed back through documents_ready.
+  background_response_action('documents_ready', docs=selected_documents, generation=action_argument('generation'))
+---
+id: documents ready
+event: documents_ready
+code: |
+  # Ignore results from a run that started before the user edited answers.
+  if action_argument('generation') == doc_generation:
+    assembled_documents = action_argument('docs')
+  background_response()
+---
+id: edit answers
+event: edit_answers
+code: |
+  # Discard documents built from the old answers, then show the review screen.
+  undefine('documents_task', 'assembled_documents', 'trust_doc', 'cert_doc',
+           'assignment_doc', 'will1_doc', 'will2_doc', 'summary_doc')
+  doc_generation = doc_generation + 1
+  undefine('review_done')
+---
+id: retry documents
+event: retry_documents
+code: |
+  undefine('documents_task', 'assembled_documents', 'trust_doc', 'cert_doc',
+           'assignment_doc', 'will1_doc', 'will2_doc', 'summary_doc')
+  doc_generation = doc_generation + 1
+---
+id: build documents now
+event: build_documents_now
+code: |
+  # Fallback for a server without background workers: build in the foreground.
+  undefine('documents_task', 'assembled_documents', 'trust_doc', 'cert_doc',
+           'assignment_doc', 'will1_doc', 'will2_doc', 'summary_doc')
+  doc_generation = doc_generation + 1
+  assembled_documents = selected_documents
+---
+id: waiting screen
+event: waiting_screen
+section: documents
+question: |
+  Preparing your documents
+subquestion: |
+  <div class="text-center my-4">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Working...</span>
+    </div>
+  </div>
+
+  We are assembling ${ quantity_noun(document_count, 'document') } as Word
+  and PDF files. This usually takes one to three minutes. This page refreshes
+  on its own when they are ready, so you can leave it open.
+
+  <small>Still waiting after five minutes?
+  [Build the documents now](${ url_action('build_documents_now') }) instead
+  (this can be slow), or [review your answers](${ url_action('edit_answers') }).</small>
+reload: 15
+---
+id: document count
+reconsider: True
+code: |
+  document_count = 1 + sum(1 for k in ('cert', 'assignment', 'summary') if docs_wanted[k])
+  if include_wills and docs_wanted['wills']:
+    document_count += 2
+---
+id: documents error screen
+event: documents_error_screen
+section: documents
+question: |
+  The documents could not be assembled
+subquestion: |
+  Something went wrong while building the documents. Please try again. If
+  the problem continues, send this message to your administrator:
+
+  > ${ documents_task.result().error_message if documents_task.failed() else 'The result of the document task was not received.' }
+action buttons:
+  - label: Try again
+    action: retry_documents
+    color: primary
+  - label: Review answers
+    action: edit_answers
+    color: secondary
+---
 id: final screen
 event: final_screen
 section: documents
@@ -124,9 +218,9 @@ subquestion: |
   % endfor
   % endif
 
-  Need to change something? [Review your answers](${ url_action('review_done') })
-  and the documents will be reassembled.
-attachment code: selected_documents
+  Need to change something? [Review your answers](${ url_action('edit_answers') })
+  and the documents will be rebuilt.
+attachment code: assembled_documents
 allow downloading: True
 zip filename: ${ file_base }_Estate_Plan.zip
 buttons:

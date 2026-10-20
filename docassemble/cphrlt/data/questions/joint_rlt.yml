@@ -67,7 +67,7 @@ id: interview order
 mandatory: True
 code: |
   if defined('docs_wanted'):
-    menu_items = [action_menu_item('Review answers', 'review_done')]
+    menu_items = [action_menu_item('Review answers', 'edit_answers')]
   else:
     menu_items = []
   intro_seen
@@ -124,4 +124,11 @@ code: |
   preparer_firm
   docs_wanted
   review_done
+  # Documents are built by a background (Celery) task. Building six DOCX/PDF
+  # files in the foreground can exceed the web server's request timeout.
+  if not defined('assembled_documents'):
+    if not documents_task.ready():
+      waiting_screen
+    elif documents_task.failed() or not defined('assembled_documents'):
+      documents_error_screen
   final_screen

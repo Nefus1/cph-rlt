@@ -256,7 +256,7 @@ from docassemble.base.thread_context import global_context, empty_globals, user_
 YAML = 'docassemble.cphrlt:data/questions/joint_rlt.yml'
 
 
-def current_info(action=None):
+def current_info(action=None, arguments=None):
     info = {'user': {'is_anonymous': True, 'is_authenticated': False, 'email': None, 'theid': 't1',
                      'the_user_id': 't1', 'roles': ['user'], 'firstname': None, 'lastname': None,
                      'nickname': None, 'country': None, 'subdivisionfirst': None,
@@ -267,8 +267,83 @@ def current_info(action=None):
             'url': 'http://localhost/interview', 'url_root': 'http://localhost/',
             'encrypted': False, 'headers': {}, 'clientip': '127.0.0.1', 'method': 'GET'}
     if action:
-        info.update({'action': action, 'arguments': {}, 'orig_action': action, 'orig_arguments': {}})
+        info.update({'action': action, 'arguments': arguments or {}, 'orig_action': action,
+                     'orig_arguments': arguments or {}})
     return info
+
+
+# ---------------------------------------------------------------- background tasks
+# A stand-in for the Celery worker: background_action() queues the action, and
+# the harness runs it on an isolated copy of the answers (a real worker's
+# changes are not saved), then runs the background_response_action() callback
+# on the real answers, exactly as the server does.
+import pickle  # noqa: E402
+import time  # noqa: E402
+
+_pending_bg = []
+
+
+class FakeTask:
+    def __init__(self):
+        self.done = False
+        self.error = None
+
+    def ready(self):
+        return self.done
+
+    def failed(self):
+        return self.error is not None
+
+    def get(self):
+        return None
+
+    def result(self):
+        class R:
+            pass
+        r = R()
+        r.error_type = 'Error' if self.error else None
+        r.error_message = self.error
+        r.value = None
+        return r
+
+
+def _fake_bg_action(action, ui_notification, **kwargs):
+    task = FakeTask()
+    _pending_bg.append((task, action, kwargs))
+    return task
+
+
+fx.bg_action = _fake_bg_action
+
+
+def _assemble(interview, user_dict, action=None, arguments=None):
+    status = docassemble.base.parse.InterviewStatus(current_info=current_info(action, arguments))
+    fx.this_thread.current_info = status.current_info
+    with user_dict_context(user_dict):
+        interview.assemble(user_dict, status)
+    return status
+
+
+def _run_background(interview, user_dict, verbose):
+    while _pending_bg:
+        task, action, kwargs = _pending_bg.pop(0)
+        bg_dict = pickle.loads(pickle.dumps(fx.pickleable_objects(user_dict)))
+        started = time.time()
+        try:
+            status = _assemble(interview, bg_dict, action, kwargs)
+            q = status.question
+            resp = getattr(q, 'action', None) if q is not None else None
+            if not resp:
+                raise RuntimeError('background action ended without background_response_action '
+                                   '(question %r)' % (q.id if q is not None else None))
+            if verbose:
+                print('     [worker] %s -> %s (%.0f s)' % (action, resp['action'], time.time() - started))
+            _assemble(interview, user_dict, resp['action'], resp['arguments'])
+        except Exception as err:  # the worker records the failure on the task
+            task.error = '%s: %s' % (err.__class__.__name__, err)
+            if verbose:
+                print('     [worker] FAILED', task.error)
+        task.done = True
 
 
 def run(scenario, max_steps=200, verbose=True):
@@ -282,11 +357,14 @@ def _run(scenario, max_steps, verbose):
     user_dict = docassemble.base.parse.get_initial_dict()
     user_dict['_internal']['steps'] = 1
     seen = []
+    pending_action = None
+    finals = 0
     for step in range(max_steps):
-        status = docassemble.base.parse.InterviewStatus(current_info=current_info())
-        fx.this_thread.current_info = status.current_info
-        with user_dict_context(user_dict):
-            interview.assemble(user_dict, status)
+        if pending_action:
+            status = _assemble(interview, user_dict, pending_action)
+            pending_action = None
+        else:
+            status = _assemble(interview, user_dict)
         global _last_status
         _last_status = status
         q = status.question
@@ -295,7 +373,17 @@ def _run(scenario, max_steps, verbose):
         if verbose:
             print("%3d  %-34s %s" % (step, qid, str(getattr(status, "question_text", "") or "").strip()[:70]))
         if qid == 'final screen':
+            finals += 1
+            if finals == 1 and scenario.get('_edit_after_final'):
+                # Simulate "Review your answers" -> Continue -> documents rebuilt.
+                first_files = [dict(att.get('file', {})) for att in status.attachments or []]
+                user_dict['_first_files'] = first_files
+                pending_action = 'edit_answers'
+                continue
             return interview, user_dict, status, seen
+        if qid == 'waiting screen':
+            _run_background(interview, user_dict, verbose)
+            continue
         action = scenario.get(qid)
         if action is None:
             raise SystemExit('No scenario answer for question id %r (seeking %r)' % (qid, getattr(q, 'fields_used', None)))
@@ -314,6 +402,9 @@ def main():
     print('\nReached final screen after %d screens.' % len(seen))
     for att in status.attachments or []:
         print('  attachment:', att.get('name'), {k: v for k, v in att.get('file', {}).items()})
+    if '_first_files' in user_dict:
+        now = [dict(att.get('file', {})) for att in status.attachments or []]
+        print('Rebuilt after edit:', now != user_dict['_first_files'])
     print('Placeholders:')
     for p in user_dict['placeholders']:
         print('  -', p['item'])

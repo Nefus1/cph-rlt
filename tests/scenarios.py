@@ -261,4 +261,6 @@ SCENARIO_C.update({
                                     ['cert', 'assignment', 'wills', 'summary']),
 })
 
+SCENARIO_A['_edit_after_final'] = True
+
 SCENARIOS = {'a': SCENARIO_A, 'b': SCENARIO_B, 'c': SCENARIO_C}

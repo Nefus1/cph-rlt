@@ -99,6 +99,27 @@ fields, the will attestation (witness names, addresses, date and place), and
 the signature lines. A missing APN is flagged in the memo but not printed
 as a blank.
 
+## Document assembly runs in the background
+
+Six DOCX templates, each converted to PDF by LibreOffice (with a second pass
+to update the trust's table of contents), can take longer than the web
+server's request timeout. That timeout shows up as an nginx **504 Gateway
+Time-out**. So the documents are built in a Celery background task:
+
+1. After the review screen, `background_action('assemble_documents_bg', 'refresh')`
+   starts the build, and the user sees a "Preparing your documents" screen.
+   It refreshes when the task finishes, and also every 15 seconds.
+2. The worker returns the finished files through
+   `background_response_action('documents_ready', ...)`, which stores them in
+   `assembled_documents`. The final screen shows those files without
+   rebuilding them.
+3. **Review answers** (on the final screen or in the menu) runs `edit_answers`.
+   It discards the old files and bumps `doc_generation`, so a late result from
+   an earlier run is ignored, and the documents are rebuilt.
+4. If the task fails, an error screen shows the message with **Try again**.
+   The waiting screen also links to `build_documents_now`, a foreground
+   fallback for servers without background workers.
+
 ## Installing
 
 1. Push this repository to GitHub, or download it as a ZIP.
