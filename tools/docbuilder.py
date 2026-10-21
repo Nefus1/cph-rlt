@@ -149,6 +149,8 @@ class Builder:
         _set_font(footer.font, size=9)
         _east_asia(footer)
         footer.paragraph_format.space_after = Pt(0)
+        contents = pstyle('Contents Line', after=3, left=Inches(1.0))
+        contents.paragraph_format.tab_stops.add_tab_stop(Inches(2.6))
         for name in ('TOC 1', 'Contents 1'):
             s = pstyle(name, after=4)
             s.paragraph_format.tab_stops.add_tab_stop(Inches(6.5), alignment=2, leader=1)
@@ -339,17 +341,6 @@ class Builder:
         self.para('_______________________________________', 'Sig Line')
         text = name_line if not label else name_line + '<br>' + label
         return self.para(text, 'Sig Name')
-
-    def toc(self, placeholder='Table of contents. Right-click and choose "Update Field" if it is not current.'):
-        p = self.doc.add_paragraph(style='Normal')
-        xml = ('<w:r %(w)s><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r>'
-               '<w:r %(w)s><w:instrText xml:space="preserve"> TOC \\o "1-1" \\h \\z \\u </w:instrText></w:r>'
-               '<w:r %(w)s><w:fldChar w:fldCharType="separate"/></w:r>'
-               '<w:r %(w)s><w:t>%(t)s</w:t></w:r>'
-               '<w:r %(w)s><w:fldChar w:fldCharType="end"/></w:r>') % {'w': nsdecls('w'), 't': placeholder}
-        for node in parse_xml('<x %s>%s</x>' % (nsdecls('w'), xml)):
-            p._p.append(node)
-        return p
 
     def table(self, headers, rows, widths=None, loop=None, shade='D9E2F3'):
         """A bordered table. ``rows`` is a list of cell-text lists.

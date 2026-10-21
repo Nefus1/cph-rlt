@@ -15,9 +15,8 @@ attachment:
   variable name: trust_doc
   docx template file: joint_rlt_trust.docx
   valid formats:
-    - pdf
-    - docx
-  update references: include_toc
+    code: |
+      document_formats
 ---
 id: certification document
 attachment:
@@ -29,8 +28,8 @@ attachment:
   variable name: cert_doc
   docx template file: certification_of_trust.docx
   valid formats:
-    - pdf
-    - docx
+    code: |
+      document_formats
 ---
 id: assignment document
 attachment:
@@ -42,8 +41,8 @@ attachment:
   variable name: assignment_doc
   docx template file: general_assignment.docx
   valid formats:
-    - pdf
-    - docx
+    code: |
+      document_formats
 ---
 id: will spouse 1
 attachment:
@@ -56,8 +55,8 @@ attachment:
   field code:
     will_for: "'1'"
   valid formats:
-    - pdf
-    - docx
+    code: |
+      document_formats
 ---
 id: will spouse 2
 attachment:
@@ -70,8 +69,8 @@ attachment:
   field code:
     will_for: "'2'"
   valid formats:
-    - pdf
-    - docx
+    code: |
+      document_formats
 ---
 id: summary document
 attachment:
@@ -83,8 +82,8 @@ attachment:
   variable name: summary_doc
   docx template file: plan_summary.docx
   valid formats:
-    - pdf
-    - docx
+    code: |
+      document_formats
 ---
 id: selected documents
 reconsider: True
@@ -99,6 +98,17 @@ code: |
     selected_documents.append(will2_doc)
   if docs_wanted['summary']:
     selected_documents.append(summary_doc)
+---
+id: document formats
+reconsider: True
+code: |
+  document_formats = ['docx', 'pdf'] if want_pdfs else ['docx']
+---
+id: assemble documents in the foreground
+code: |
+  # Word files only: no LibreOffice conversion, so this finishes in seconds.
+  # PDF copies are built in the background instead (see the interview order).
+  assembled_documents = selected_documents
 ---
 id: document generation counter
 code: |
@@ -142,10 +152,12 @@ code: |
 id: build documents now
 event: build_documents_now
 code: |
-  # Fallback for a server without background workers: build in the foreground.
+  # Fallback for a server without background workers: build the Word files
+  # in the foreground (PDF conversion is what takes too long).
   undefine('documents_task', 'assembled_documents', 'trust_doc', 'cert_doc',
            'assignment_doc', 'will1_doc', 'will2_doc', 'summary_doc')
   doc_generation = doc_generation + 1
+  want_pdfs = False
   assembled_documents = selected_documents
 ---
 id: waiting screen
@@ -165,8 +177,8 @@ subquestion: |
   on its own when they are ready, so you can leave it open.
 
   <small>Still waiting after five minutes?
-  [Build the documents now](${ url_action('build_documents_now') }) instead
-  (this can be slow), or [review your answers](${ url_action('edit_answers') }).</small>
+  [Get the Word files now](${ url_action('build_documents_now') }) without
+  PDFs, or [review your answers](${ url_action('edit_answers') }).</small>
 reload: 15
 ---
 id: document count
@@ -202,7 +214,13 @@ question: |
   Your estate plan documents are ready
 subquestion: |
   Download each document below, or use **Download all** for a ZIP file.
+  % if want_pdfs:
   Each document is available as a PDF and as an editable Word file.
+  % else:
+  Each document is an editable Word file. (To get PDF copies too, [review
+  your answers](${ url_action('edit_answers') }) and choose "Also create
+  PDF copies.")
+  % endif
 
   % if len(placeholders):
   <div class="rlt-callout rlt-warning">

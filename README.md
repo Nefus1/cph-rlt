@@ -15,7 +15,7 @@ conventional California RLT with the plan choices most couples need.
 
 | Document | Template | Notes |
 |---|---|---|
-| Joint Revocable Living Trust Agreement | `joint_rlt_trust.docx` | 14 to 15 auto-numbered articles, table of contents, Schedules A/B/C, notary acknowledgment |
+| Joint Revocable Living Trust Agreement | `joint_rlt_trust.docx` | 14 to 15 auto-numbered articles, list of articles (contents), Schedules A/B/C, notary acknowledgment |
 | Certification of Trust | `certification_of_trust.docx` | Probate Code §18100.5 items (b)(1)–(8), signed under penalty of perjury and notarized |
 | General Assignment of Assets | `general_assignment.docx` | Supports a Heggstad/§850 petition; excludes retirement accounts and insurance |
 | Pour-Over Will (one per spouse) | `pour_over_will.docx` | Same template run twice through `field code`; executor, guardian, IAEA, attestation |
@@ -75,7 +75,7 @@ of payment.
 - Question modifiers: `if:` (alternate questions), `reconsider`, `imports`, and `modules` with custom classes (`RLTPerson`, `Beneficiary`, `SpecificGift`, `TrustAsset`)
 - Attachments:
   - standalone `attachment` blocks with `variable name`, shown through `attachment code`, with `allow downloading` and `zip filename` for a ZIP
-  - `valid formats`, `update references` (to rebuild the table of contents), and `field code` (one will template for both spouses)
+  - `valid formats` set by code (Word only, or Word plus PDF), and `field code` (one will template for both spouses)
   - `include_docx_template()` for the notary acknowledgment
 - Custom CSS (`data/static/rlt.css`) and `metadata` exit options
 
@@ -99,26 +99,28 @@ fields, the will attestation (witness names, addresses, date and place), and
 the signature lines. A missing APN is flagged in the memo but not printed
 as a blank.
 
-## Document assembly runs in the background
+## Avoiding gateway timeouts
 
-Six DOCX templates, each converted to PDF by LibreOffice (with a second pass
-to update the trust's table of contents), can take longer than the web
-server's request timeout. That timeout shows up as an nginx **504 Gateway
-Time-out**. So the documents are built in a Celery background task:
+Converting each document to PDF runs LibreOffice, and doing that for six
+documents inside one web request can exceed nginx's timeout (a **504
+Gateway Time-out**). So:
 
-1. After the review screen, `background_action('assemble_documents_bg', 'refresh')`
-   starts the build, and the user sees a "Preparing your documents" screen.
-   It refreshes when the task finishes, and also every 15 seconds.
-2. The worker returns the finished files through
-   `background_response_action('documents_ready', ...)`, which stores them in
-   `assembled_documents`. The final screen shows those files without
-   rebuilding them.
-3. **Review answers** (on the final screen or in the menu) runs `edit_answers`.
-   It discards the old files and bumps `doc_generation`, so a late result from
-   an earlier run is ignored, and the documents are rebuilt.
-4. If the task fails, an error screen shows the message with **Try again**.
-   The waiting screen also links to `build_documents_now`, a foreground
-   fallback for servers without background workers.
+- **By default only Word files are built.** They are rendered directly from
+  the templates, with no LibreOffice, and finish in a few seconds. The trust's
+  contents list is generated text, not a Word field, so it never needs a
+  LibreOffice update.
+- **PDF copies are opt-in** ("Also create PDF copies?" on the documents
+  screen). When chosen, the documents are built by a Celery background task:
+  1. `background_action('assemble_documents_bg', 'refresh')` starts the task,
+     and a "Preparing your documents" screen refreshes until it finishes.
+  2. The task hands the files back through
+     `background_response_action('documents_ready', ...)`.
+  3. If the task fails, an error screen offers **Try again**. If the server
+     has no working background queue (RabbitMQ/Celery), the waiting screen
+     links to `build_documents_now`, which delivers the Word files instead.
+- **Review answers** (on the final screen or in the menu) runs `edit_answers`,
+  which discards the old files and rebuilds them. A `doc_generation` counter
+  makes the interview ignore a late result from an earlier background run.
 
 ## Installing
 

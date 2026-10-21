@@ -21,7 +21,9 @@ def build(path):
     b.center('@Ts@ and Trustees', after=60)
     b.ctl('{%p if include_toc %}')
     b.para('TABLE OF CONTENTS', 'Center Bold', after=12)
-    raw.toc()
+    b.ctl('{%p for a in article_contents %}')
+    b.para('Article {{ a["num"] }}<tab>{{ a["title"] }}', 'Contents Line')
+    b.ctl('{%p endfor %}')
     b.ctl('{%p endif %}')
     raw.page_break()
 
@@ -46,7 +48,7 @@ def build(path):
     b.ctl('{%p endif %}')
 
     # ============================================================ ARTICLE 1
-    b.article('Establishment of the Trust')
+    b.article('{{ art_title["establishment"] }}')
     b.section('Name of the Trust',
               'This trust shall be known as <b>{{ trust_title }}</b>, ' + DATED + '. Title to '
               'trust property may be taken in the name of "{{ s1_name }} and {{ s2_name }}, '
@@ -75,7 +77,7 @@ def build(path):
               'has then been transferred to the Trustee.')
 
     # ============================================================ ARTICLE 2
-    b.article('Family Information')
+    b.article('{{ art_title["family"] }}')
     b.section('Marriage',
               '{% if union_type == "rdp" %}The @Ts@ are registered domestic partners of each '
               'other{% if marriage_date_known %}, having registered on {{ format_date(marriage_date, '
@@ -121,7 +123,7 @@ def build(path):
               'intentionally make no provision for {{ join_list(omitted_people, "or") }}.{% endif %}')
 
     # ============================================================ ARTICLE 3
-    b.article('Trust Property')
+    b.article('{{ art_title["property"] }}')
     b.section('Trust Estate',
               'The Trust Estate consists of the property listed on the Schedules, the property '
               'transferred by the @Ts@\' General Assignment of even date, and all other property '
@@ -173,7 +175,7 @@ def build(path):
               'the death of a @T@ shall be administered as part of that @T@\'s share.')
 
     # ============================================================ ARTICLE 4
-    b.article('Rights Reserved by the @Ts@')
+    b.article('{{ art_title["rights"] }}')
     b.section('Income and Principal During Joint Lifetimes',
               'While both @Ts@ are living, the Trustee shall pay to or apply for the benefit of '
               'the @Ts@ as much of the net income and principal of the community property as '
@@ -215,7 +217,7 @@ def build(path):
               'from reassessment under Revenue and Taxation Code Section 62(d).')
 
     # ============================================================ ARTICLE 5
-    b.article('Trustees')
+    b.article('{{ art_title["trustees"] }}')
     b.section('Initial Trustees',
               'The @Ts@, {{ s1_name }} and {{ s2_name }}, are the initial Trustees. While both '
               'serve, {% if joint_trustee_authority == "either" %}either of them acting alone may '
@@ -288,7 +290,7 @@ def build(path):
               '18100.5, and any person may rely on it without seeing this instrument.')
 
     # ============================================================ ARTICLE 6
-    b.article('Incapacity')
+    b.article('{{ art_title["incapacity"] }}')
     b.section('Determination of Incapacity',
               'A @T@ or an individual Trustee is incapacitated if any of the following occurs:')
     b.sub('{% if incapacity_physicians == 1 %}one licensed physician{% else %}two licensed physicians{% endif %} '
@@ -323,7 +325,7 @@ def build(path):
               'the incapacity.')
 
     # ============================================================ ARTICLE 7
-    b.article('Administration After the Death of the First @T@')
+    b.article('{{ art_title["first_death"] }}')
     b.section('Definitions',
               'The "Deceased @T@" is the first @T@ to die, and the "Surviving @T@" is the other '
               '@T@. If the @Ts@ die under circumstances in which the order of their deaths cannot '
@@ -417,7 +419,7 @@ def build(path):
 
     # ============================================================ ARTICLE 8 (optional)
     b.ctl('{%p if plan_type in ("ab", "disclaimer") %}')
-    b.article('{{ subtrust_name }}')
+    b.article('{{ art_title["subtrust"] }}')
     b.section('Irrevocability',
               'The @SUB@ is irrevocable and may not be amended by the Surviving @T@ or any other '
               'person.')
@@ -485,7 +487,7 @@ def build(path):
     b.ctl('{%p endif %}')
 
     # ============================================================ SURVIVOR'S TRUST
-    b.article('The Survivor\'s Trust')
+    b.article('{{ art_title["survivors_trust"] }}')
     b.section('Revocable Trust for the Surviving @T@',
               'The Survivor\'s Trust remains fully revocable and amendable by the Surviving @T@ '
               'as provided in Article @ART:rights@.')
@@ -511,7 +513,7 @@ def build(path):
               'appointed as provided in Article @ART:final@.')
 
     # ============================================================ FINAL DISTRIBUTION
-    b.article('Distribution After the Deaths of Both @Ts@')
+    b.article('{{ art_title["final"] }}')
     b.section('Remaining Trust Estate',
               'On the death of the Surviving @T@, the property of every trust under this instrument '
               'that is directed to be distributed under this Article (the "Remaining Trust Estate") '
@@ -602,7 +604,7 @@ def build(path):
               '{% else %}as follows: {{ ultimate_named | trim | replace("\\n", "; ") }}{% endif %}.')
 
     # ============================================================ BENEFICIARY TRUSTS
-    b.article('Trusts for Beneficiaries')
+    b.article('{{ art_title["beneficiary_trusts"] }}')
     b.section('Application',
               'This Article governs every share of the Trust Estate that becomes distributable '
               'outright to an individual beneficiary on or after the death of the Surviving @T@, '
@@ -710,7 +712,7 @@ def build(path):
               'receipt of the payee is a complete discharge of the Trustee.')
 
     # ============================================================ POWERS
-    b.article('Trustee Powers')
+    b.article('{{ art_title["powers"] }}')
     b.section('General Powers',
               'The Trustee has all powers conferred on trustees by California law, including '
               'Probate Code Sections 16200 through 16249, as amended, and in addition the powers '
@@ -762,7 +764,7 @@ def build(path):
               'exclusion.')
 
     # ============================================================ SPECIAL ASSETS
-    b.article('Retirement Benefits and Special Assets')
+    b.article('{{ art_title["special_assets"] }}')
     b.section('Retirement Benefits',
               'If the Trustee is the beneficiary of an individual retirement account or qualified '
               'retirement plan ("Retirement Benefits"):')
@@ -798,7 +800,7 @@ def build(path):
     b.ctl('{%p endif %}')
 
     # ============================================================ GENERAL PROVISIONS
-    b.article('General Provisions')
+    b.article('{{ art_title["general"] }}')
     b.section('Spendthrift Provision',
               'No beneficiary may voluntarily or involuntarily anticipate, assign, or encumber any '
               'interest in income or principal before actual receipt, and no interest shall be '

@@ -126,6 +126,8 @@ id: plan derived
 reconsider: True
 code: |
   art = article_map(plan_type)
+  art_title = article_titles(plan_type, trustor_term)
+  article_contents = article_toc(plan_type, trustor_term)
   if plan_type == 'ab':
     subtrust_name = 'Bypass Trust'
   elif plan_type == 'disclaimer':

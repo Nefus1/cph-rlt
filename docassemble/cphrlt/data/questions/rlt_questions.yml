@@ -1061,7 +1061,7 @@ fields:
   - Print initial lines in the footer of each trust page?: initials_footer
     datatype: yesnoradio
     default: True
-  - Include a table of contents in the trust?: include_toc
+  - Include a list of articles (table of contents) in the trust?: include_toc
     datatype: yesnoradio
     default: True
 ---
@@ -1119,3 +1119,10 @@ fields:
     datatype: checkboxes
     code: document_choices
     none of the above: False
+  - Also create PDF copies?: want_pdfs
+    datatype: yesnoradio
+    default: False
+    help: |
+      Word files are ready in a few seconds. Converting every document to
+      PDF takes one to three minutes and runs in the background while a
+      waiting screen is shown. You can always print the Word files to PDF.

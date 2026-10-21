@@ -360,11 +360,15 @@ def _run(scenario, max_steps, verbose):
     pending_action = None
     finals = 0
     for step in range(max_steps):
+        started = time.time()
         if pending_action:
             status = _assemble(interview, user_dict, pending_action)
             pending_action = None
         else:
             status = _assemble(interview, user_dict)
+        elapsed = time.time() - started
+        if verbose and elapsed > 2:
+            print('     [foreground request took %.1f s]' % elapsed)
         global _last_status
         _last_status = status
         q = status.question

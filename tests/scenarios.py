@@ -156,7 +156,7 @@ SCENARIO_A.update({
     'preparer': ['preparer_firm = ""', 'preparer_attorney = ""', 'preparer_bar = ""',
                  'preparer_phone = ""', 'preparer_email = ""'],
     'documents wanted': _checkboxes('docs_wanted', ['cert', 'assignment', 'wills', 'summary'],
-                                    ['cert', 'assignment', 'wills', 'summary']),
+                                    ['cert', 'assignment', 'wills', 'summary']) + ['want_pdfs = True'],
 })
 
 # ---------------------------------------------------------------- Scenario B
@@ -218,7 +218,7 @@ SCENARIO_B.update({
                  'preparer_bar = "123456"', 'preparer_phone = "(555) 555-0100"',
                  'preparer_email = "jordan@example.com"'],
     'documents wanted': _checkboxes('docs_wanted', ['cert', 'assignment', 'summary'],
-                                    ['cert', 'assignment', 'summary']),
+                                    ['cert', 'assignment', 'summary']) + ['want_pdfs = False'],
 })
 
 # ---------------------------------------------------------------- Scenario C
@@ -258,7 +258,7 @@ SCENARIO_C.update({
     'preparer': ['preparer_firm = "Example Law, APC"', 'preparer_attorney = ""', 'preparer_bar = ""',
                  'preparer_phone = ""', 'preparer_email = ""'],
     'documents wanted': _checkboxes('docs_wanted', ['wills', 'summary'],
-                                    ['cert', 'assignment', 'wills', 'summary']),
+                                    ['cert', 'assignment', 'wills', 'summary']) + ['want_pdfs = False'],
 })
 
 SCENARIO_A['_edit_after_final'] = True

@@ -14,6 +14,8 @@ __all__ = [
     'TrustAsset',
     'num_word',
     'article_map',
+    'article_titles',
+    'article_toc',
     'stage_schedule',
     'money',
     'pct',
@@ -96,6 +98,41 @@ def article_map(plan_type):
     keys += ['survivors_trust', 'final', 'beneficiary_trusts', 'powers',
              'special_assets', 'general']
     return {key: num_word(index + 1) for index, key in enumerate(keys)}
+
+
+def article_titles(plan_type, trustor_word='Trustor'):
+    """Article headings, used both in the article headings and the contents list."""
+    one = trustor_word
+    many = trustor_word + 's'
+    titles = {
+        'establishment': 'Establishment of the Trust',
+        'family': 'Family Information',
+        'property': 'Trust Property',
+        'rights': 'Rights Reserved by the ' + many,
+        'trustees': 'Trustees',
+        'incapacity': 'Incapacity',
+        'first_death': 'Administration After the Death of the First ' + one,
+        'subtrust': 'Bypass Trust' if plan_type == 'ab' else 'Disclaimer Trust',
+        'survivors_trust': "The Survivor's Trust",
+        'final': 'Distribution After the Deaths of Both ' + many,
+        'beneficiary_trusts': 'Trusts for Beneficiaries',
+        'powers': 'Trustee Powers',
+        'special_assets': 'Retirement Benefits and Special Assets',
+        'general': 'General Provisions',
+    }
+    return titles
+
+
+def article_toc(plan_type, trustor_word='Trustor'):
+    """[{'num': 'One', 'title': 'Establishment of the Trust'}, ...] in article order.
+
+    Printed as a static contents list, so no LibreOffice field update is needed
+    when the document is assembled.
+    """
+    numbers = article_map(plan_type)
+    titles = article_titles(plan_type, trustor_word)
+    order = sorted(numbers, key=lambda key: _NUM_WORDS.index(numbers[key]))
+    return [{'num': numbers[key], 'title': titles[key]} for key in order]
 
 
 def stage_schedule(count, ages):

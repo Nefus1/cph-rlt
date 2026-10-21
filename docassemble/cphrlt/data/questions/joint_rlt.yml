@@ -124,9 +124,11 @@ code: |
   preparer_firm
   docs_wanted
   review_done
-  # Documents are built by a background (Celery) task. Building six DOCX/PDF
-  # files in the foreground can exceed the web server's request timeout.
-  if not defined('assembled_documents'):
+  # Word files are built in the request (fast). PDF conversion runs
+  # LibreOffice for every document, which can exceed the web server's
+  # request timeout, so when PDFs are requested the documents are built by a
+  # background (Celery) task while a waiting screen is shown.
+  if want_pdfs and not defined('assembled_documents'):
     if not documents_task.ready():
       waiting_screen
     elif documents_task.failed() or not defined('assembled_documents'):
